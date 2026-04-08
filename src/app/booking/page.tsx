@@ -4,9 +4,10 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowRight, ArrowLeft, CheckCircle, User, Building2, Briefcase,
-  DollarSign, Calendar, MessageSquare, Send, Sparkles
+  DollarSign, Calendar, MessageSquare, Send, Sparkles, Loader2
 } from 'lucide-react';
 import AnimatedSection from '@/components/ui/AnimatedSection';
+import { submitBookingForm } from '@/app/actions/booking';
 
 const serviceOptions = [
   { id: 'software', label: 'Software Development', color: '#6366f1' },
@@ -48,6 +49,8 @@ const steps = [
 export default function BookingPage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     services: [] as string[],
     name: '', email: '', phone: '', company: '', industry: '',
@@ -72,8 +75,31 @@ export default function BookingPage() {
     if (currentStep > 0) setCurrentStep(prev => prev - 1);
   };
 
-  const handleSubmit = () => {
-    setSubmitted(true);
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    setSubmitError(null);
+    
+    const result = await submitBookingForm({
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone,
+      company: formData.company,
+      industry: formData.industry,
+      services: formData.services,
+      budget: formData.budget,
+      timeline: formData.timeline,
+      preferred_date: formData.preferredDate,
+      preferred_time: formData.preferredTime,
+      message: formData.message,
+    });
+
+    setIsSubmitting(false);
+
+    if (result.success) {
+      setSubmitted(true);
+    } else {
+      setSubmitError(result.error || 'Failed to submit form.');
+    }
   };
 
   const canProceed = () => {
@@ -211,7 +237,7 @@ export default function BookingPage() {
                                   background: selected ? `${svc.color}15` : undefined,
                                   borderColor: selected ? `${svc.color}50` : undefined,
                                   color: selected ? svc.color : 'var(--color-text-secondary)',
-                                  ringColor: selected ? svc.color : undefined,
+                                  boxShadow: selected ? `0 0 0 2px ${svc.color}` : undefined,
                                 }}
                               >
                                 <div className="flex items-center gap-3">
@@ -406,6 +432,11 @@ export default function BookingPage() {
                             </div>
                           )}
                         </div>
+                        {submitError && (
+                          <div className="mt-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+                            {submitError}
+                          </div>
+                        )}
                       </div>
                     )}
                   </motion.div>
@@ -415,9 +446,9 @@ export default function BookingPage() {
                 <div className="flex justify-between items-center mt-8 pt-6 border-t border-[var(--color-border-glass)]">
                   <button
                     onClick={prevStep}
-                    disabled={currentStep === 0}
+                    disabled={currentStep === 0 || isSubmitting}
                     className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer ${
-                      currentStep === 0
+                      currentStep === 0 || isSubmitting
                         ? 'text-[var(--color-text-muted)] cursor-not-allowed'
                         : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] glass'
                     }`}
@@ -428,9 +459,9 @@ export default function BookingPage() {
                   {currentStep < steps.length - 1 ? (
                     <button
                       onClick={nextStep}
-                      disabled={!canProceed()}
+                      disabled={!canProceed() || isSubmitting}
                       className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
-                        canProceed()
+                        canProceed() && !isSubmitting
                           ? 'glow-btn'
                           : 'bg-[var(--color-bg-glass)] text-[var(--color-text-muted)] cursor-not-allowed'
                       }`}
@@ -440,9 +471,16 @@ export default function BookingPage() {
                   ) : (
                     <button
                       onClick={handleSubmit}
-                      className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold glow-btn cursor-pointer"
+                      disabled={isSubmitting}
+                      className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold cursor-pointer ${
+                        isSubmitting ? 'bg-[var(--color-bg-glass)] text-[var(--color-text-muted)]' : 'glow-btn'
+                      }`}
                     >
-                      Submit Request <Send size={16} />
+                      {isSubmitting ? (
+                        <>Submitting <Loader2 size={16} className="animate-spin" /></>
+                      ) : (
+                        <>Submit Request <Send size={16} /></>
+                      )}
                     </button>
                   )}
                 </div>
