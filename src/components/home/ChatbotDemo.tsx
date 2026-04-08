@@ -19,12 +19,15 @@ export default function ChatbotDemo() {
     const delay = msg.role === 'bot' ? 1500 : 800;
 
     if (msg.role === 'bot') {
-      setIsTyping(true);
       const typingTimer = setTimeout(() => {
-        setIsTyping(false);
-        setVisibleMessages(prev => [...prev, msg]);
-        setCurrentIndex(prev => prev + 1);
-      }, delay);
+        setIsTyping(true);
+        const messageTimer = setTimeout(() => {
+          setIsTyping(false);
+          setVisibleMessages(prev => [...prev, msg]);
+          setCurrentIndex(prev => prev + 1);
+        }, delay);
+        return () => clearTimeout(messageTimer);
+      }, 100);
       return () => clearTimeout(typingTimer);
     } else {
       const timer = setTimeout(() => {
